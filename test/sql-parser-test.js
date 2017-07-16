@@ -79,13 +79,13 @@ theWorld.addEventListener("input", function (event) {
 
 var world = {
   manifold: "M",
-  well: "W1"
+  well: "3"
 };
 
 theWorld.innerText = JSON.stringify(world).toUpperCase();
 theWorld.classList = ["success"];
 
-searchCondition.innerText = 'manifold = "M"';
+searchCondition.innerText = 'manifold like "M%" and well in (1, 2, 3)';
 searchCondition.classList = ["success"];
 
 testSearchCondition(searchCondition.value);
