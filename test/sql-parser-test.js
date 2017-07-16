@@ -1,8 +1,8 @@
 
-var lexer = new Lexer();
+var parser = new SqlParser();
 
 function testSearchCondition(text) {
-  var result = lexer.parseString(text);
+  var result = parser.parseString(text);
   if (result.error) {
     searchCondition.classList = ["error"];
     error(result.error);

@@ -1,5 +1,5 @@
 
-var Lexer = function () {
+var SqlParser = function () {
 var self = this;
 
 // Grammar
@@ -114,7 +114,8 @@ self.parseTokens = function parseTokens(tokens) {
   var words = [], sentence = [];
 
   function validRule(expr) {
-    return rules.includes(expr.replace(/_/g, " ").trim());
+    var rule = expr.replace(/_/g, " ");
+    return rules.includes(rule.trim());
   }
 
   function validLike(words) {
@@ -131,11 +132,13 @@ self.parseTokens = function parseTokens(tokens) {
       if (validRule(expression) && validLike(words)) {
         expressions.push(expression);
         sentence.push(words, tokens[i]);
-      } else {
+      } else if (expression.length) {
         if (!validRule(expression)) {
           return {error: "Unknown expression: " + expression};
         }
         return {error: "Illegal LIKE comparator: " + words[2]};
+      } else {
+        sentence.push(tokens[i]);
       }
       in_flag = between_flag = false;
       expression = "";
@@ -144,7 +147,7 @@ self.parseTokens = function parseTokens(tokens) {
       if (operators.includes(tokens[i])) {
         expression += "OPERATOR_";
       } else if (in_oper.includes(tokens[i])) {
-        expression += "IN_";
+        expression += "IN_(_";
         in_flag = true;
       } else if (between_oper.includes(tokens[i])) {
         expression += "BETWEEN_";
@@ -153,14 +156,21 @@ self.parseTokens = function parseTokens(tokens) {
         expression += "NOT_";
       } else if (between_flag && "AND" === tokens[i]) {
         expression += "AND_";
-      } else if ("(" === tokens[i]) {
-        expression += "(_";
       } else if (in_flag && ")" === tokens[i]) {
         expression += "EXPRESSIONS_)_";
-      } else if (")" === tokens[i]) {
-        expression += ")_";
+        in_flag = false;
       } else if (in_flag) {
         // Added in other in_flag check
+      } else if (!in_flag && ("(" === tokens[i] || ")" === tokens[i])) {
+        // Exclude parentheses from expression evaluation
+        if (words.length && validRule(expression) && validLike(words)) {
+          expressions.push(expression);
+          sentence.push(words);
+          expression = "";
+          words = [];
+        }
+        sentence.push(tokens[i]);
+        continue; // not a word
       } else {
         expression += "EXPRESSION_";
       }
@@ -171,7 +181,7 @@ self.parseTokens = function parseTokens(tokens) {
   if (validRule(expression) && validLike(words)) {
     expressions.push(expression);
     sentence.push(words);
-  } else {
+  } else if (expression.length) {
     if (!validRule(expression)) {
       return {error: "Unknown expression: " + expression};
     }
