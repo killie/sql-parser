@@ -40,12 +40,12 @@ var SqlParser = function () {
   };
 
   self.tokenize = function tokenize(s, caps) {
-    var inside = false, count = 0, i, prev, start = 0, tokens = [], token;
+    var inside = false, count = 0, i, start = 0, tokens = [], token, q, sq = "'", dq ='"';
 
     function addToken(ch) {
       var token = s.substring(start, i).trim();
       if (token.length) {
-        if (token[0] !== "\"") token = token.replace(",", "");
+        if (token[0] !== sq || token[0] !== dq) token = token.replace(",", "");
         if (ch) token = ch + token + ch;
         if (token.length) tokens.push(caps ? token.toUpperCase() : token); 
       }
@@ -83,17 +83,21 @@ var SqlParser = function () {
         start = i + 1;
       }
       if (count < 0) return {error: "Unmatching parentheses"};
-      if (s[i] === "\"") {
-        // TODO: Support both " and ' strings
-        inside = !inside;
-        if (!inside) addToken("'"); // TODO: Keep string characters
-        start = i + 1;
+      if (s[i] === sq || s[i] === dq) {
+        if (q === undefined) q = s[i];
+        if (s[i] === q) {
+          inside = !inside;
+          if (!inside) {
+            addToken(q);
+            q = undefined;
+          }
+          start = i + 1;
+	}
       }
       if (s[i] === " " && !inside) {
         addToken();
         start = i + 1;
       }
-      prev = s[i]; // prev is for escaping string \' and \"
     }
 
     if (inside) return {error: "Unclosed string"};
